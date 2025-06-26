@@ -1,5 +1,6 @@
 # Telegram TikTok Repost Remover Bot (Advanced Dashboard Version)
 import os
+import re
 import aiohttp
 import json
 from datetime import datetime
@@ -209,24 +210,26 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if context.user_data.get("delete_mode"):
-        context.user_data['delete_mode'] = False
-        if 'sessionid' not in text:
-            await update.message.reply_text("❌ يرجى إرسال sessionid صالح.")
-            return
+     context.user_data['delete_mode'] = False
 
-        await update.message.reply_text("🔄 جاري تنفيذ العملية...")
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post("https://puppeteer-repost-cleaner.onrender.com/clean", json={"sessionid": text}) as resp:
-                    result = await resp.json()
-                    if result.get("success"):
-                        await update.message.reply_text(f"✅ تم حذف {result['deleted']} من الريبوستات بنجاح.")
-                    else:
-                        await update.message.reply_text(f"❌ فشل الحذف: {result.get('message', 'غير معروف')}")
-        except Exception as e:
-            await update.message.reply_text("⚠️ حدث خطأ أثناء التواصل مع الخادم.")
-            print("Error:", e)
+    # ✅ تحقق من شكل sessionid (بشكل تقريبي)
+    if not re.match(r'^[a-zA-Z0-9_\-%=\.~@]+$', text.strip()):
+        await update.message.reply_text("❌ يرجى إرسال sessionid صالح.")
         return
+
+    await update.message.reply_text("🔄 جاري تنفيذ العملية...")
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post("https://puppeteer-repost-cleaner.onrender.com/clean", json={"sessionid": text.strip()}) as resp:
+                result = await resp.json()
+                if result.get("success"):
+                    await update.message.reply_text(f"✅ تم حذف {result['deleted']} من الريبوستات بنجاح.")
+                else:
+                    await update.message.reply_text(f"❌ فشل الحذف: {result.get('message', 'غير معروف')}")
+    except Exception as e:
+        await update.message.reply_text("⚠️ حدث خطأ أثناء التواصل مع الخادم.")
+        print("Error:", e)
+    return
 
 # ---------- Dashboard ----------
 async def dashboard(update: Update, context: ContextTypes.DEFAULT_TYPE):
