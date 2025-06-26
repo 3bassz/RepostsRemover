@@ -204,19 +204,19 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if 'sessionid' in text:
-     await update.message.reply_text("🔄 جاري تنفيذ العملية...")
+        await update.message.reply_text("🔄 جاري تنفيذ العملية...")
 
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.post("https://your-puppeteer-service.onrender.com/clean", json={"sessionid": text}) as resp:
-                result = await resp.json()
-                if result.get("success"):
-                    await update.message.reply_text(f"✅ تم حذف {result['deleted']} من الريبوستات بنجاح.")
-                else:
-                    await update.message.reply_text(f"❌ فشل الحذف: {result.get('message', 'غير معروف')}")
-    except Exception as e:
-        await update.message.reply_text("⚠️ حدث خطأ أثناء التواصل مع الخادم.")
-        print("Error:", e)
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post("https://puppeteer-repost-cleaner.onrender.com/clean", json={"sessionid": text}) as resp:
+                    result = await resp.json()
+                    if result.get("success"):
+                        await update.message.reply_text(f"✅ تم حذف {result['deleted']} من الريبوستات بنجاح.")
+                    else:
+                        await update.message.reply_text(f"❌ فشل الحذف: {result.get('message', 'غير معروف')}")
+        except Exception as e:
+            await update.message.reply_text("⚠️ حدث خطأ أثناء التواصل مع الخادم.")
+            print("Error:", e)
 
 # ---------- Dashboard Command ----------
 async def dashboard(update: Update, context: ContextTypes.DEFAULT_TYPE):
