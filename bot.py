@@ -226,12 +226,13 @@ async def dashboard(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("📊 لوحة تحكم المالك:", reply_markup=dashboard_menu())
 
 # ---------- Bot Startup ----------
-app = ApplicationBuilder().token(BOT_TOKEN).build()
+if __name__ == "__main__":
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
 
-app.add_handler(CommandHandler("start", start))
-app.add_handler(CommandHandler("dashboard", dashboard))
-app.add_handler(CallbackQueryHandler(button_handler))
-app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), message_handler))
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("dashboard", dashboard))
+    app.add_handler(CallbackQueryHandler(button_handler))
+    app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), message_handler))
 
-print("✅ Bot is running...")
-app.run_polling()
+    print("✅ Bot is running...")
+    app.run_polling()
