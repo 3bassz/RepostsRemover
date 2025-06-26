@@ -158,6 +158,33 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data['broadcast'] = True
         await query.edit_message_text("📢 أرسل الآن الرسالة التي تريد إرسالها لكل المستخدمين:", reply_markup=back_menu("main"))
 
+    elif data == "confirm_delete":
+      sessionid = context.user_data.get('sessionid')
+    if not sessionid:
+        await query.edit_message_text("⚠️ لا يوجد sessionid محفوظ. أعد الخطوات من جديد.")
+        return
+
+    await query.edit_message_text("♻️ جاري حذف الريبوستات...")
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                "https://puppeteer-repost-cleaner.onrender.com/clean",
+                json={"sessionid": sessionid}
+            ) as resp:
+                result = await resp.json()
+
+        if result.get("success"):
+            await query.edit_message_text(
+                f"✅ تم حذف {result['deleted']} من الريبوستات بنجاح.")
+        else:
+            await query.edit_message_text(
+                f"❌ فشل الحذف: {result.get('message', 'غير معروف')}")
+    except Exception as e:
+        await query.edit_message_text("⚠️ حدث خطأ أثناء التواصل مع الخادم.")
+        print(e)
+
+
 # ---------- Message Handler ----------
 async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_chat.id)
@@ -210,26 +237,43 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if context.user_data.get("delete_mode"):
-     context.user_data['delete_mode'] = False
+        context.user_data['delete_mode'] = False
 
-    # ✅ تحقق من شكل sessionid (بشكل تقريبي)
-    if not re.match(r'^[a-zA-Z0-9_\-%=\.~@]+$', text.strip()):
+    sessionid = update.message.text.strip()
+
+    if not re.match(r'^[a-zA-Z0-9_\-%=\.~@]+$', sessionid):
         await update.message.reply_text("❌ يرجى إرسال sessionid صالح.")
         return
 
-    await update.message.reply_text("🔄 جاري تنفيذ العملية...")
+    await update.message.reply_text("🔄 جاري حساب عدد الفيديوهات التي تحتوي على ريبوستات...")
+
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.post("https://puppeteer-repost-cleaner.onrender.com/clean", json={"sessionid": text.strip()}) as resp:
+            async with session.post(
+                "https://puppeteer-repost-cleaner.onrender.com/count",
+                json={"sessionid": sessionid}
+            ) as resp:
                 result = await resp.json()
-                if result.get("success"):
-                    await update.message.reply_text(f"✅ تم حذف {result['deleted']} من الريبوستات بنجاح.")
-                else:
-                    await update.message.reply_text(f"❌ فشل الحذف: {result.get('message', 'غير معروف')}")
+
+        if result.get("success"):
+            repost_count = result.get("reposts", 0)
+            context.user_data['sessionid'] = sessionid
+            await update.message.reply_text(
+                f"📊 عدد الفيديوهات التي تحتوي على ريبوستات: {repost_count}",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🗑️ حذف الآن", callback_data="confirm_delete")]
+                ])
+            )
+        else:
+            await update.message.reply_text(
+                f"❌ حدث خطأ أثناء الحساب: {result.get('message', 'غير معروف')}"
+            )
+
     except Exception as e:
         await update.message.reply_text("⚠️ حدث خطأ أثناء التواصل مع الخادم.")
-        print("Error:", e)
+        print(e)
     return
+
 
 # ---------- Dashboard ----------
 async def dashboard(update: Update, context: ContextTypes.DEFAULT_TYPE):
